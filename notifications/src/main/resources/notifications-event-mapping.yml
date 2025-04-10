@@ -1,0 +1,81 @@
+---
+##
+ # Copyright OpenSearch Contributors
+ # SPDX-License-Identifier: Apache-2.0
+##
+
+# Schema file for the notifications-event index
+# "dynamic" is set to "false" so that only specified fields are indexed instead of all fields.
+dynamic: false
+properties:
+  metadata:
+    type: object
+    properties:
+      last_updated_time_ms:
+        type: date
+        format: epoch_millis
+      created_time_ms:
+        type: date
+        format: epoch_millis
+      access: # Array of backend_role who has access to this document
+        type: keyword
+  event: # dynamic structure to store notifications event
+    type: object
+    properties:
+      event_source:
+        type: object
+        properties:
+          title:
+            type: text
+            fields:
+              keyword:
+                type: keyword
+          reference_id:
+            type: keyword
+          severity:
+            type: keyword
+          tags:
+            type: text
+            fields:
+              keyword:
+                type: keyword
+      status_list:
+        type: nested
+        properties:
+          config_id:
+            type: keyword
+          config_name:
+            type: text
+            fields:
+              keyword:
+                type: keyword
+          config_type:
+            type: keyword
+          email_recipient_status: # applicable only for config_type=email
+            type: object # flattened instead of nested to reduce complexity
+            properties:
+              recipient:
+                type: text
+                fields:
+                  keyword:
+                    type: keyword
+              delivery_status: # Individual status for each email recipient
+                type: object
+                properties:
+                  status_code:
+                    type: keyword
+                  status_text:
+                    type: text
+                    fields:
+                      keyword:
+                        type: keyword
+          delivery_status: # Overall status for config_id/channel (including email)
+            type: object
+            properties:
+              status_code:
+                type: keyword
+              status_text:
+                type: text
+                fields:
+                  keyword:
+                    type: keyword

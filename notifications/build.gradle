@@ -6,10 +6,10 @@
 
 buildscript {
     ext {
-        opensearch_version = System.getProperty("opensearch.version", "3.0.0-beta1-SNAPSHOT")
+        opensearch_version = System.getProperty("opensearch.version", "2.19.0-SNAPSHOT")
         isSnapshot = "true" == System.getProperty("build.snapshot", "true")
-        buildVersionQualifier = System.getProperty("build.version_qualifier", "beta1")
-        // 3.0.0-SNAPSHOT -> 3.0.0.0-SNAPSHOT
+        buildVersionQualifier = System.getProperty("build.version_qualifier", "")
+        // 2.3.0-SNAPSHOT -> 2.3.0.0-SNAPSHOT
         version_tokens = opensearch_version.tokenize('-')
         opensearch_build = version_tokens[0] + '.0'
         plugin_no_snapshot = opensearch_build
@@ -21,10 +21,9 @@ buildscript {
         }
         opensearch_no_snapshot = opensearch_version.replace("-SNAPSHOT","")
         common_utils_version = System.getProperty("common_utils.version", opensearch_build)
-        kotlin_version = System.getProperty("kotlin.version", "1.9.25")
+        kotlin_version = System.getProperty("kotlin.version", "1.8.21")
         junit_version = System.getProperty("junit.version", "5.7.2")
         aws_version = System.getProperty("aws.version", "1.12.687")
-        asm_version = System.getProperty("asm.version", "9.7")
     }
 
     repositories {
@@ -40,17 +39,7 @@ buildscript {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlin_version}"
         classpath "org.jetbrains.kotlin:kotlin-allopen:${kotlin_version}"
         classpath "io.gitlab.arturbosch.detekt:detekt-gradle-plugin:1.23.0"
-        classpath "org.jacoco:org.jacoco.agent:0.8.12"
-    }
-    
-     configurations {
-        classpath {
-            resolutionStrategy {
-                //in order to handle jackson's higher release version in shadow, this needs to be upgraded to latest
-                force(group: "org.ow2.asm", name: "asm", version: asm_version)
-                force(group: "org.ow2.asm", name: "asm-commons", version: asm_version)
-            }
-        }
+        classpath "org.jacoco:org.jacoco.agent:0.8.11"
     }
 }
 
@@ -69,27 +58,27 @@ allprojects {
         maven { url "https://aws.oss.sonatype.org/content/repositories/snapshots" }
     }
     group = "org.opensearch"
-
     plugins.withId('java') {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+        sourceCompatibility = targetCompatibility = "11"
     }
     plugins.withId('org.jetbrains.kotlin.jvm') {
-        compileJava.sourceCompatibility = JavaVersion.VERSION_21
-        compileJava.targetCompatibility = JavaVersion.VERSION_21
-        compileTestJava.sourceCompatibility = JavaVersion.VERSION_21
-        compileTestJava.targetCompatibility = JavaVersion.VERSION_21
-        compileKotlin.kotlinOptions.jvmTarget = "21"
-        compileTestKotlin.kotlinOptions.jvmTarget = "21"
+        compileKotlin.kotlinOptions.jvmTarget = compileTestKotlin.kotlinOptions.jvmTarget = "11"
         compileKotlin.dependsOn ktlint
+    }
+}
+
+configurations.configureEach {
+    if (it.state != Configuration.State.UNRESOLVED) return
+    resolutionStrategy {
+        force "org.yaml:snakeyaml:2.0"
     }
 }
 
 configurations {
     ktlint {
         resolutionStrategy {
-            force "ch.qos.logback:logback-classic:1.5.16"
-            force "ch.qos.logback:logback-core:1.5.16"
+            force "ch.qos.logback:logback-classic:1.3.14"
+            force "ch.qos.logback:logback-core:1.3.14"
         }
     }
 }
@@ -102,7 +91,8 @@ dependencies {
     }
 }
 
-task ktlint(type: JavaExec, group: "verification") {
+tasks.register('ktlint', JavaExec) {
+    group = "verification"
     description = "Check Kotlin code style."
     mainClass = "com.pinterest.ktlint.Main"
     classpath = configurations.ktlint
@@ -112,7 +102,8 @@ task ktlint(type: JavaExec, group: "verification") {
     // see https://github.com/pinterest/ktlint#usage for more
 }
 
-task ktlintFormat(type: JavaExec, group: "formatting") {
+tasks.register('ktlintFormat', JavaExec) {
+    group = "formatting"
     description = "Fix Kotlin code style deviations."
     mainClass = "com.pinterest.ktlint.Main"
     classpath = configurations.ktlint
@@ -134,12 +125,12 @@ evaluationDependsOnChildren()
 check.dependsOn subprojects*.check
 
 // updateVersion: Task to auto increment to the next development iteration
-task updateVersion {
+tasks.register('updateVersion') {
     onlyIf { System.getProperty('newVersion') }
     doLast {
         ext.newVersion = System.getProperty('newVersion')
         println "Setting version to ${newVersion}."
-         // String tokenization to support -SNAPSHOT
-        ant.replaceregexp(file:'build.gradle', match: '"opensearch.version", "\\d.*"', replace: '"opensearch.version", "' + newVersion.tokenize('-')[0] + '-SNAPSHOT"', flags:'g', byline:true)
+        // String tokenization to support -SNAPSHOT
+        ant.replaceregexp(file: 'build.gradle', match: '"opensearch.version", "\\d.*"', replace: '"opensearch.version", "' + newVersion.tokenize('-')[0] + '-SNAPSHOT"', flags: 'g', byline: true)
     }
 }

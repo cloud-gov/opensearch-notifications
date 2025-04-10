@@ -9,10 +9,12 @@ import inet.ipaddr.IPAddressString
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
-import org.apache.hc.client5.http.classic.methods.HttpPost
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient
-import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse
-import org.apache.hc.core5.http.io.entity.StringEntity
+import org.apache.http.client.methods.CloseableHttpResponse
+import org.apache.http.client.methods.HttpPost
+import org.apache.http.entity.StringEntity
+import org.apache.http.impl.client.CloseableHttpClient
+import org.apache.http.message.BasicStatusLine
+import org.easymock.EasyMock
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -64,8 +66,10 @@ internal class ChimeDestinationTests {
         val httpResponse = mockk<CloseableHttpResponse>()
         every { mockHttpClient.execute(any<HttpPost>()) } returns httpResponse
 
-        every { httpResponse.code } returns RestStatus.OK.status
+        val mockStatusLine = mockk<BasicStatusLine>()
+        every { httpResponse.statusLine } returns mockStatusLine
         every { httpResponse.entity } returns null
+        every { mockStatusLine.statusCode } returns RestStatus.OK.status
 
         val httpClient = DestinationHttpClient(mockHttpClient)
         val webhookDestinationTransport = WebhookDestinationTransport(httpClient)
@@ -88,13 +92,18 @@ internal class ChimeDestinationTests {
 
     @Test
     fun `test chime message empty entity response`() {
-        val mockHttpClient = mockk<CloseableHttpClient>()
+        val mockHttpClient: CloseableHttpClient = EasyMock.createMock(CloseableHttpClient::class.java)
         val expectedWebhookResponse = DestinationMessageResponse(RestStatus.OK.status, "{}")
 
-        val httpResponse = mockk<CloseableHttpResponse>()
-        every { mockHttpClient.execute(any<HttpPost>()) } returns httpResponse
-        every { httpResponse.code } returns RestStatus.OK.status
-        every { httpResponse.entity } returns StringEntity("")
+        val httpResponse: CloseableHttpResponse = EasyMock.createMock(CloseableHttpResponse::class.java)
+        EasyMock.expect(mockHttpClient.execute(EasyMock.anyObject(HttpPost::class.java))).andReturn(httpResponse)
+        val mockStatusLine: BasicStatusLine = EasyMock.createMock(BasicStatusLine::class.java)
+        EasyMock.expect(httpResponse.statusLine).andReturn(mockStatusLine)
+        EasyMock.expect(httpResponse.entity).andReturn(StringEntity("")).anyTimes()
+        EasyMock.expect(mockStatusLine.statusCode).andReturn(RestStatus.OK.status)
+        EasyMock.replay(mockHttpClient)
+        EasyMock.replay(httpResponse)
+        EasyMock.replay(mockStatusLine)
 
         val httpClient = DestinationHttpClient(mockHttpClient)
         val webhookDestinationTransport = WebhookDestinationTransport(httpClient)
@@ -118,13 +127,18 @@ internal class ChimeDestinationTests {
     @Test
     fun `test chime message non-empty entity response`() {
         val responseContent = "It worked!"
-        val mockHttpClient = mockk<CloseableHttpClient>()
+        val mockHttpClient: CloseableHttpClient = EasyMock.createMock(CloseableHttpClient::class.java)
         val expectedWebhookResponse = DestinationMessageResponse(RestStatus.OK.status, responseContent)
 
-        val httpResponse = mockk<CloseableHttpResponse>()
-        every { mockHttpClient.execute(any<HttpPost>()) } returns httpResponse
-        every { httpResponse.code } returns RestStatus.OK.status
-        every { httpResponse.entity } returns StringEntity(responseContent)
+        val httpResponse: CloseableHttpResponse = EasyMock.createMock(CloseableHttpResponse::class.java)
+        EasyMock.expect(mockHttpClient.execute(EasyMock.anyObject(HttpPost::class.java))).andReturn(httpResponse)
+        val mockStatusLine: BasicStatusLine = EasyMock.createMock(BasicStatusLine::class.java)
+        EasyMock.expect(httpResponse.statusLine).andReturn(mockStatusLine)
+        EasyMock.expect(httpResponse.entity).andReturn(StringEntity(responseContent)).anyTimes()
+        EasyMock.expect(mockStatusLine.statusCode).andReturn(RestStatus.OK.status)
+        EasyMock.replay(mockHttpClient)
+        EasyMock.replay(httpResponse)
+        EasyMock.replay(mockStatusLine)
 
         val httpClient = DestinationHttpClient(mockHttpClient)
         val webhookDestinationTransport = WebhookDestinationTransport(httpClient)
