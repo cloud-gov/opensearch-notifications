@@ -57,6 +57,6 @@ internal object UserAccessManager : UserAccess {
         }
         // User has access to resource if resource is public i.e. no access roles attached, user is an admin user or there is any intersection
         // between user backend roles and access roles
-        return access.isEmpty() || user.roles.contains(ADMIN_ROLE) || user.backendRoles.any { it in access }
+        return access.isEmpty() || user.roles.contains(ADMIN_ROLE) || user.backendRoles.equals(access)
     }
 }
