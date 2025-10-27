@@ -42,7 +42,7 @@ buildscript {
         classpath "io.gitlab.arturbosch.detekt:detekt-gradle-plugin:1.23.0"
         classpath "org.jacoco:org.jacoco.agent:0.8.13"
     }
-    
+
      configurations {
         classpath {
             resolutionStrategy {
