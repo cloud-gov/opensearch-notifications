@@ -55,8 +55,8 @@ internal object UserAccessManager : UserAccess {
         if (user == null || !PluginSettings.isRbacEnabled()) { // Filtering is disabled
             return true
         }
-        // User has access to resource if resource is public i.e. no access roles attached, user is an admin user or there is any intersection
-        // between user backend roles and access roles
-        return access.isEmpty() || user.roles.contains(ADMIN_ROLE) || user.backendRoles.equals(access)
+        // User has access to resource if resource is public i.e. no access roles attached, user is an admin user or the
+        // user backend roles and access roles exactly match
+        return access.isEmpty() || user.roles.contains(ADMIN_ROLE) || user.backendRoles.sorted().equals(access.sorted())
     }
 }
